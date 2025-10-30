@@ -59,12 +59,37 @@ app.get('/', (req, res) => {
 // POST /api/products
 app.post('/api/products', async (req, res) => {
   try {
-    // TODO: Implement create product logic
     // Extract product data from request body
+    const { name, price, category } = req.body;
+
+    // Validate required fields
+    if (!name || !price || !category) {
+      return res.status(400).json({ 
+        error: 'All fields (name, price, category) are required' 
+      });
+    }
+
     // Create new product using Product model
-    // Save to database and return response
-    res.status(201).json({ message: 'Create product endpoint' });
+    const product = new Product({
+      name,
+      price,
+      category
+    });
+
+    // Save to database
+    const savedProduct = await product.save();
+
+    // Return success response
+    res.status(201).json({
+      message: 'Product created successfully',
+      product: savedProduct
+    });
   } catch (error) {
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ error: errors });
+    }
     res.status(400).json({ error: error.message });
   }
 });
@@ -73,10 +98,15 @@ app.post('/api/products', async (req, res) => {
 // GET /api/products
 app.get('/api/products', async (req, res) => {
   try {
-    // TODO: Implement get all products logic
     // Retrieve all products from database
+    const products = await Product.find();
+
     // Return products array
-    res.status(200).json({ message: 'Get all products endpoint' });
+    res.status(200).json({
+      message: 'Products retrieved successfully',
+      count: products.length,
+      products: products
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -86,11 +116,27 @@ app.get('/api/products', async (req, res) => {
 // GET /api/products/:id
 app.get('/api/products/:id', async (req, res) => {
   try {
-    // TODO: Implement get product by ID logic
     // Extract ID from request parameters
+    const { id } = req.params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid product ID format' });
+    }
+
     // Find product by ID
-    // Return product or 404 if not found
-    res.status(200).json({ message: 'Get product by ID endpoint' });
+    const product = await Product.findById(id);
+
+    // Return 404 if product not found
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Return product
+    res.status(200).json({
+      message: 'Product retrieved successfully',
+      product: product
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -100,12 +146,53 @@ app.get('/api/products/:id', async (req, res) => {
 // PUT /api/products/:id
 app.put('/api/products/:id', async (req, res) => {
   try {
-    // TODO: Implement update product logic
-    // Extract ID and updated data from request
+    // Extract ID from request parameters
+    const { id } = req.params;
+    const { name, price, category } = req.body;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid product ID format' });
+    }
+
+    // Validate that at least one field is being updated
+    if (!name && !price && !category) {
+      return res.status(400).json({ 
+        error: 'At least one field (name, price, or category) must be provided' 
+      });
+    }
+
+    // Validate price if provided
+    if (price !== undefined && price < 0) {
+      return res.status(400).json({ error: 'Price cannot be negative' });
+    }
+
     // Find product by ID and update
-    // Return updated product or 404 if not found
-    res.status(200).json({ message: 'Update product endpoint' });
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { name, price, category },
+      { 
+        new: true, // Return the updated document
+        runValidators: true // Run schema validators on update
+      }
+    );
+
+    // Return 404 if product not found
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Return updated product
+    res.status(200).json({
+      message: 'Product updated successfully',
+      product: updatedProduct
+    });
   } catch (error) {
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ error: errors });
+    }
     res.status(400).json({ error: error.message });
   }
 });
@@ -114,11 +201,27 @@ app.put('/api/products/:id', async (req, res) => {
 // DELETE /api/products/:id
 app.delete('/api/products/:id', async (req, res) => {
   try {
-    // TODO: Implement delete product logic
     // Extract ID from request parameters
+    const { id } = req.params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid product ID format' });
+    }
+
     // Find product by ID and delete
-    // Return success message or 404 if not found
-    res.status(200).json({ message: 'Delete product endpoint' });
+    const deletedProduct = await Product.findByIdAndDelete(id);
+
+    // Return 404 if product not found
+    if (!deletedProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Return success message
+    res.status(200).json({
+      message: 'Product deleted successfully',
+      product: deletedProduct
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
