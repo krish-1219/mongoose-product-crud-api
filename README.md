@@ -1,2 +1,3 @@
 # mongoose-product-crud-api
-Node.js CRUD API for product management using Mongoose and MongoDB.
+
+This repository demonstrates schema design and CRUD operations in MongoDB with validation via Mongoose. It implements basic Create, Read, Update, and Delete operations for a product database using Node.js, Express, and Mongoose.
